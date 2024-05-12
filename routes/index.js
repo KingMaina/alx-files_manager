@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import AppController from '../controllers/AppController';
 import AuthController from '../controllers/AuthController';
+import UsersController from '../controllers/UsersController';
 
 const router = Router();
 
@@ -12,4 +13,7 @@ router.get('/stats', AppController.getStats);
 router.get('/connect', AuthController.getConnect);
 router.get('/disconnect', AuthController.getDisconnect);
 
+// Users
+router.post('/users', UsersController.postNew);
+// router.post('/users', UsersController.postNew);
 export default router;
