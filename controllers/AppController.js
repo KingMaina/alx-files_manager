@@ -1,6 +1,6 @@
-import { request, response } from "express";
-import redisClient from "../utils/redis";
-import dbClient from "../utils/db";
+import { request, response } from 'express';
+import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
 class AppController {
   /**
