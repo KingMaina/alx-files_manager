@@ -13,6 +13,8 @@ class DBClient {
         console.log('Database connection error', error);
       } else {
         this._db = client.db(DB_DATABASE);
+        this._users = this._db.collection('user');
+        this._files = this._db.collection('files');
       }
     });
   }
