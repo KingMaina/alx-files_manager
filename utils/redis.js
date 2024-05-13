@@ -76,7 +76,7 @@ class RedisClient {
   /**
    * Deletes the value stored in redis using `key`
    * @param {string} key A key whose value is stored in redis
-   * @returns {void} Nothing
+   * @returns {Promise<void>} Nothing
    */
   async del(key) {
     if (typeof key !== 'string') return;

@@ -1,4 +1,3 @@
-import { request, response } from 'express';
 import redisClient from '../utils/redis';
 import dbClient from '../utils/db';
 
@@ -16,8 +15,8 @@ class AppController {
 
   /**
    * Get the statistics of users and files
-   * @param {request} req API request object
-   * @param {response} res API response object
+   * @param {import('express').Request} req API request object
+   * @param {import('express').Response} res API response object
    */
   static async getStats(req, res) {
     const numUsers = await dbClient.nbUsers();
