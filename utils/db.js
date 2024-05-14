@@ -13,7 +13,7 @@ class DBClient {
         console.log('Database connection error', error);
       } else {
         this._db = client.db(DB_DATABASE);
-        this._users = this._db.collection('user');
+        this._users = this._db.collection('users');
         this._files = this._db.collection('files');
       }
     });
@@ -28,8 +28,9 @@ class DBClient {
    * @returns Number of users in the database
    */
   async nbUsers() {
-    if (!this.isAlive()) return 0;
-    return this._db.collection('users').countDocuments();
+    // if (!this.isAlive()) return 0;
+    const users = await this._users.countDocuments();
+    return users;
   }
 
   /**
@@ -37,8 +38,9 @@ class DBClient {
    * @returns Number of files in the database
    */
   async nbFiles() {
-    if (!this.isAlive()) return 0;
-    return this._db.collection('files').countDocuments();
+    // if (!this.isAlive()) return 0;
+    const files = await this._files.countDocuments();
+    return files;
   }
 }
 

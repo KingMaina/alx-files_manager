@@ -15,5 +15,5 @@ router.get('/disconnect', AuthController.getDisconnect);
 
 // Users
 router.post('/users', UsersController.postNew);
-// router.post('/users', UsersController.postNew);
+router.get('/users/me', UsersController.getMe);
 export default router;

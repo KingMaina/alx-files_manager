@@ -1,6 +1,8 @@
 import sha1 from 'sha1';
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
-import { getAuthtoken, getXtoken } from '../utils/api';
+import { getXtoken } from '../utils/api';
+import redisClient from '../utils/redis';
 
 class UsersController {
   /**
@@ -26,24 +28,19 @@ class UsersController {
   /**
    * Retrieves the user
    * @param {import('express').Request} req API Request object
-   * @param {import("express").Response} res API Response object
+   * @param {import('express').Response} res API Response object
    */
   static async getMe(req, res) {
     // Auth the user
     const xToken = getXtoken(req);
-    if (!xToken) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const authToken = getAuthtoken(req);
-    if (!authToken) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const { email } = authToken;
-    const user = await dbClient._db.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    return res.status(201).json({ email, id: user.Id });
+    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
+    // Get user id from active session
+    const userId = await redisClient.get(`auth_${xToken}`);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    // Get user from database
+    const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(201).json({ email: user.email, id: userId });
   }
 }
 
