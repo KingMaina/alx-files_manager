@@ -1,9 +1,17 @@
 import sha1 from 'sha1';
 import { ObjectId } from 'mongodb';
 import dbClient from './db';
+import redisClient from './redis';
 
 const ACCEPTED_FILE_TYPES = ['folder', 'file', 'image'];
 export const ROOT_ID = ObjectId(Buffer.alloc(24, '0').toString('utf-8'));
+export const STATUS_CODES = {
+  SUCCESS: 200,
+  CREATED: 201,
+  NOT_FOUND: 404,
+  SERVER_ERROR: 500,
+  UNAUTHORIZED: 401,
+};
 
 /**
  * Retrieves the user's API token
@@ -97,4 +105,23 @@ export async function validateFile(fileData) {
     isPublic,
   };
   return results;
+}
+
+/**
+ * Authenticate and authorize the user
+ * @param {import("express").Request} req API Request
+ */
+export async function authenticateAndAuthorizeUser(req) {
+  // Auth the user
+  const xToken = getXtoken(req);
+  if (!xToken) return null;
+  // Get user id from active session
+  const userId = await redisClient.get(`auth_${xToken}`);
+  if (!userId) return null;
+  // Get user from database
+  const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
+  if (!user) return null;
+  const authenticatedUser = { id: user._id, name: user.name };
+  // req.user = authenticatedUser;
+  return authenticatedUser;
 }

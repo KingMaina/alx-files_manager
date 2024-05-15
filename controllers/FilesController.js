@@ -1,10 +1,12 @@
 import { v4 as UUID4 } from 'uuid';
 import { ObjectId } from 'mongodb';
 import {
-  findFile, getXtoken, validateFile,
+  STATUS_CODES,
+  authenticateAndAuthorizeUser,
+  findFile,
+  validateFile,
 } from '../utils/api';
 import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
 
 const fs = require('fs').promises;
 
@@ -27,13 +29,7 @@ class FilesController {
    * @param {import("express").Response} res API Response
    */
   static async postUpload(req, res) {
-    const xToken = getXtoken(req);
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user id from active session
-    const userId = await redisClient.get(`auth_${xToken}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user from database
-    const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
+    const user = await authenticateAndAuthorizeUser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const fileData = await validateFile(req.body);
     if (!fileData.isValid) {
@@ -43,9 +39,7 @@ class FilesController {
     }
     const { parentId = null } = req.body;
     if (parentId && parentId !== '0' && fileData.data.type !== 'folder') {
-      console.log('Parent ID:', parentId);
       const parentFile = await findFile(parentId);
-      console.log('Parent file: ', parentFile);
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
       }
@@ -56,14 +50,14 @@ class FilesController {
     // Upload folder if found
     if (fileData.data.type === 'folder') {
       const results = await dbClient._files.insertOne({
-        userId,
+        userId: user.id,
         name: fileData.data.name,
         type: fileData.data.type,
         isPublic: req.body.isPublic || false,
       });
       return res.status(201).json({
         id: results.insertedId,
-        userId,
+        userId: user.id,
         name: fileData.data.name,
         type: fileData.data.type,
         isPublic: req.body.isPublic || false,
@@ -85,18 +79,18 @@ class FilesController {
         // mode: 0o767,
       });
     } catch (error) {
-      console.error(error && error.message);
       return res
         .status(500)
         .json({ error: (error && error.message) || 'Something went wrong' });
     }
     const query = {
-      userId,
+      userId: user.id,
       name: req.body.name,
       type: req.body.type,
       isPublic: req.body.isPublic || false,
       parentId: req.body.parentId || 0,
       localPath: filePath,
+      // data: req.body.data,
     };
     await dbClient._files.insertOne(query);
     query.id = query._id;
@@ -108,18 +102,10 @@ class FilesController {
   /**
    * Retrieves a file
    * @param {import("express").Request} req API Request
-   * @param {string} req.params.id File ID
    * @param {import("express").Response} res API Response
    */
   static async getShow(req, res) {
-    // Auth the user
-    const xToken = getXtoken(req);
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user id from active session
-    const userId = await redisClient.get(`auth_${xToken}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user from database
-    const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
+    const user = await authenticateAndAuthorizeUser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     // Get file ID
     const { id = null } = req.params;
@@ -127,7 +113,114 @@ class FilesController {
     // Search for file
     const file = await dbClient._files.findOne({ _id: ObjectId(id) });
     if (!file) return res.status(404).json({ error: 'Not Found' });
-    return res.status(200).json(file);
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
+
+  /**
+   * Retrieves all files for a user based on folders if any
+   * @param {import("express").Request} req API Request
+   * @param {import("express").Response} res API Response
+   */
+  static async getIndex(req, res) {
+    const user = await authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res
+        .status(STATUS_CODES.UNAUTHORIZED)
+        .json({ error: 'Unauthorized' });
+    }
+    const {
+      parentId = 0,
+      // page = 0,
+    } = req.query;
+    // TODO: Add pagination
+    const files = await dbClient._files.find({ parentId }).toArray();
+    const filesDataObjects = files.map((file) => ({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    }));
+    return res.status(STATUS_CODES.SUCCESS).json(filesDataObjects);
+  }
+
+  /**
+   * Publishes a file
+   * @param {import("express").Request} req API Request
+   * @param {import("express").Response} res API Response
+   */
+  static async putPublish(req, res) {
+    const user = await authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res
+        .status(STATUS_CODES.UNAUTHORIZED)
+        .json({ error: 'Unauthorized' });
+    }
+    const { id } = req.params;
+    const filter = {
+      userId: user.id,
+      _id: ObjectId(id),
+    };
+    const file = await dbClient._files.findOne(filter);
+    if (!file) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+    }
+    await dbClient._files.updateOne(filter, {
+      $set: {
+        isPublic: true,
+      },
+    });
+    return res.status(STATUS_CODES.SUCCESS).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: true,
+      parentId: file.parentId,
+    });
+  }
+
+  /**
+   * Unpublishes a file
+   * @param {import("express").Request} req API Request
+   * @param {import("express").Response} res API Response
+   */
+  static async putUnpublish(req, res) {
+    const user = await authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res
+        .status(STATUS_CODES.UNAUTHORIZED)
+        .json({ error: 'Unauthorized' });
+    }
+    const { id } = req.params;
+    const filter = {
+      userId: user.id,
+      _id: ObjectId(id),
+    };
+    const file = await dbClient._files.findOne(filter);
+    if (!file) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+    }
+    await dbClient._files.updateOne(
+      { userId: user.id, _id: ObjectId(id) },
+      { $set: { isPublic: false } },
+    );
+    return res.status(STATUS_CODES.SUCCESS).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: false,
+      parentId: file.parentId,
+    });
   }
 }
 
