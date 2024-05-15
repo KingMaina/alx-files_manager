@@ -28,13 +28,13 @@ class FilesController {
    */
   static async postUpload(req, res) {
     const xToken = getXtoken(req);
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized1' });
+    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
     // Get user id from active session
     const userId = await redisClient.get(`auth_${xToken}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized2' });
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     // Get user from database
     const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
-    if (!user) return res.status(401).json({ error: 'Unauthorized3' });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const fileData = await validateFile(req.body);
     if (!fileData.isValid) {
       return res
@@ -76,7 +76,7 @@ class FilesController {
     const filePath = `${FOLDER_PATH}/${fileName}`;
     const dataDecoded = decodeBase64(req.body.data);
     if (!dataDecoded) {
-      return res.status(401).json({ error: 'Unauthorized4' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     try {
       await fs.mkdir(FOLDER_PATH, { recursive: true });
