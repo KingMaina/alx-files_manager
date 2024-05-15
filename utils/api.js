@@ -1,4 +1,9 @@
 import sha1 from 'sha1';
+import { ObjectId } from 'mongodb';
+import dbClient from './db';
+
+const ACCEPTED_FILE_TYPES = ['folder', 'file', 'image'];
+export const ROOT_ID = ObjectId(Buffer.alloc(24, '0').toString('utf-8'));
 
 /**
  * Retrieves the user's API token
@@ -45,4 +50,51 @@ export function verifyPasswordHash(password, hashedPassword) {
     return true;
   }
   return false;
+}
+
+export async function findFile(parentId) {
+  const file = await dbClient._files.findOne({ _id: ObjectId(parentId) });
+  return file;
+}
+
+/**
+ * Validates the input data file
+ * @param {import("express").Request} req API Request object
+ */
+export async function validateFile(fileData) {
+  const results = {
+    isValid: false,
+    data: {},
+    error: {
+      code: null,
+      message: '',
+    },
+  };
+  const {
+    name, type, data, isPublic = false,
+  } = fileData;
+  if (!name || typeof name !== 'string') {
+    results.error.message = 'Missing name';
+    results.error.code = 400;
+    return results;
+  }
+  if (typeof type !== 'string' || !ACCEPTED_FILE_TYPES.includes(type)) {
+    results.error.message = 'Missing type';
+    results.error.code = 400;
+    return results;
+  }
+  if (!data && type !== 'folder') {
+    results.error.message = 'Missing data';
+    results.error.code = 400;
+    return results;
+  }
+  results.isValid = true;
+  results.data = {
+    ...results.data,
+    name,
+    type,
+    data,
+    isPublic,
+  };
+  return results;
 }

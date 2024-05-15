@@ -3,20 +3,27 @@ import { MongoClient } from 'mongodb';
 
 const DB_HOST = process.env.DB_HOST ? process.env.DB_HOST : 'localhost';
 const DB_PORT = process.env.DB_PORT ? process.env.DB_PORT : 27017;
-const DB_DATABASE = process.env.DB_PORT ? process.env.DB_PORT : 'files_manager';
-const DB_URL = `mongodb://${DB_HOST}:${DB_PORT}`;
+const DB_DATABASE = process.env.DB_DATABASE
+  ? process.env.DB_DATABASE
+  : 'files_manager';
+const DB_URL = `mongodb://${DB_HOST}:${DB_PORT}`; // Remove connection of atlas
 
 class DBClient {
   constructor() {
-    MongoClient.connect(DB_URL, { useUnifiedTopology: true }, (error, client) => {
-      if (error) {
-        console.log('Database connection error', error);
-      } else {
-        this._db = client.db(DB_DATABASE);
-        this._users = this._db.collection('users');
-        this._files = this._db.collection('files');
-      }
-    });
+    MongoClient.connect(
+      DB_URL,
+      { useUnifiedTopology: true },
+      (error, client) => {
+        if (error) {
+          console.log('Database connection error', error);
+          // client.close();
+        } else {
+          this._db = client.db(DB_DATABASE);
+          this._users = this._db.collection('users');
+          this._files = this._db.collection('files');
+        }
+      },
+    );
   }
 
   isAlive() {
