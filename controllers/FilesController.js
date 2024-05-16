@@ -1,6 +1,10 @@
 import { v4 as UUID4 } from 'uuid';
 import { ObjectId } from 'mongodb';
+import mime from 'mime-types';
+import Queue from 'bull';
 import {
+  DEFAULT_FILE_STORAGE_FOLDER,
+  IMG_THUMBNAIL_WIDTHS,
   STATUS_CODES,
   authenticateAndAuthorizeUser,
   findFile,
@@ -9,6 +13,8 @@ import {
 import dbClient from '../utils/db';
 
 const fs = require('fs').promises;
+
+const fileQueue = new Queue('fileQueue');
 
 /**
  * Decodes a base64 string to UTF-8
@@ -64,7 +70,6 @@ class FilesController {
       });
     }
     // Store file locally
-    const DEFAULT_FILE_STORAGE_FOLDER = '/tmp/files_manager';
     const { FOLDER_PATH = DEFAULT_FILE_STORAGE_FOLDER } = process.env;
     const fileName = UUID4().toString();
     const filePath = `${FOLDER_PATH}/${fileName}`;
@@ -90,12 +95,16 @@ class FilesController {
       isPublic: req.body.isPublic || false,
       parentId: req.body.parentId || 0,
       localPath: filePath,
-      // data: req.body.data,
     };
     await dbClient._files.insertOne(query);
     query.id = query._id;
     delete query.localPath;
     delete query._id;
+    // Add image thumbnail processing to job queue
+    fileQueue.add('fileQueue', {
+      userId: user.id,
+      fileId: query.id,
+    });
     return res.status(201).json(query);
   }
 
@@ -221,6 +230,53 @@ class FilesController {
       isPublic: false,
       parentId: file.parentId,
     });
+  }
+
+  /**
+   * Retrieves the content of a file
+   * @param {import("express").Request} req API Request
+   * @param {import("express").Response} res API Response
+   */
+  static async getFile(req, res) {
+    const user = authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res
+        .status(STATUS_CODES.UNAUTHORIZED)
+        .json({ error: 'Unauthorized' });
+    }
+    const { id } = req.params;
+    if (!id) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+    }
+    const filter = {
+      userId: user.id,
+      _id: ObjectId(id),
+    };
+    const file = await dbClient._files.findOne(filter);
+    if (!file) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+    }
+    if (file.type === 'folder') {
+      return res
+        .status(STATUS_CODES.BAD_REQUEST)
+        .json({ error: "A folder doesn't have content" });
+    }
+    const fileMIMEType = mime.lookup(file.name);
+    if (!fileMIMEType) {
+      return res.status(404).json({ error: 'Not Found' });
+    }
+    // Choose thumbnail
+    let imagePath = file.localPath;
+    const size = +req.query.size;
+    if (IMG_THUMBNAIL_WIDTHS.includes(size)) {
+      imagePath = `${file.localPath}_${size}`;
+    }
+    try {
+      const content = await fs.readFile(imagePath, { encoding: 'utf-8' });
+      return res.status(STATUS_CODES.SUCCESS).type(fileMIMEType).end(content);
+    } catch (err) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+    }
   }
 }
 

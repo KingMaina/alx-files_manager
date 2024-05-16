@@ -4,6 +4,8 @@ import dbClient from './db';
 import redisClient from './redis';
 
 const ACCEPTED_FILE_TYPES = ['folder', 'file', 'image'];
+export const IMG_THUMBNAIL_WIDTHS = [500, 250, 100];
+export const DEFAULT_FILE_STORAGE_FOLDER = '/tmp/files_manager';
 export const ROOT_ID = ObjectId(Buffer.alloc(24, '0').toString('utf-8'));
 export const STATUS_CODES = {
   SUCCESS: 200,
@@ -11,6 +13,7 @@ export const STATUS_CODES = {
   NOT_FOUND: 404,
   SERVER_ERROR: 500,
   UNAUTHORIZED: 401,
+  BAD_REQUEST: 400,
 };
 
 /**

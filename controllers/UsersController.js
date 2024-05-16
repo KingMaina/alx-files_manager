@@ -1,5 +1,6 @@
 import sha1 from 'sha1';
 import { ObjectId } from 'mongodb';
+import Queue from 'bull';
 import dbClient from '../utils/db';
 import { getXtoken } from '../utils/api';
 import redisClient from '../utils/redis';
@@ -14,7 +15,6 @@ class UsersController {
     const { email = '', password = '' } = req.body;
     if (!email) return res.status(400).json({ error: 'Missing email' });
     if (!password) return res.status(400).json({ error: 'Missing password' });
-    // TODO: Check if user exists
     const emailExists = await dbClient._users.findOne({ email });
     if (emailExists) return res.status(400).json({ error: 'Already exist' });
     const hashedPassword = sha1(password);
@@ -22,6 +22,8 @@ class UsersController {
       email,
       password: hashedPassword,
     });
+    const userQueue = new Queue('userQueue');
+    userQueue.add('userQueue', { userId: newUser.insertedId });
     return res.status(201).json({ id: newUser.insertedId, email });
   }
 
