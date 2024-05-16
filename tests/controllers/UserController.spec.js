@@ -8,8 +8,6 @@
 //   password: '1234$!',
 // };
 
-// describe('user tests', () => {
-//   it('create a new user', () => new Promise((done) => {
 //     request.post(
 //       `${API_URL}/users`,
 //       {
