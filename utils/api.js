@@ -115,14 +115,23 @@ export async function validateFile(fileData) {
  * @param {import("express").Request} req API Request
  */
 export async function authenticateAndAuthorizeUser(req) {
-  // Auth the user
-  const xToken = getXtoken(req);
-  if (!xToken) return null;
-  // Get user id from active session
-  const userId = await redisClient.get(`auth_${xToken}`);
-  if (!userId) return null;
-  // Get user from database
-  const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
-  if (!user) return null;
-  return { id: user._id, name: user.name, email: user.email };
+  try {
+    // Auth the user
+    const xToken = getXtoken(req);
+    if (!xToken) return null;
+    // Get user id from active session
+    const userId = await redisClient.get(`auth_${xToken}`);
+    if (!userId) return null;
+    // Get user from database
+    const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
+    if (!user) return null;
+    return {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      xToken,
+    };
+  } catch (error) {
+    return null;
+  }
 }

@@ -1,7 +1,9 @@
 import { v4 as uuid4 } from 'uuid';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
-import { getAuthtoken, getXtoken, hashPassword } from '../utils/api';
+import {
+  authenticateAndAuthorizeUser, getAuthtoken, hashPassword,
+} from '../utils/api';
 
 class AuthController {
   /**
@@ -32,11 +34,13 @@ class AuthController {
    * @param {import("express").Response} res API Response
    */
   static async getDisconnect(req, res) {
-    // Check X-token for authorization
-    const xToken = getXtoken(req);
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
+    // Authenticate the user
+    const user = await authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     // Delete auth key from redis
-    const redisKey = `auth_${xToken}`;
+    const redisKey = `auth_${user.xToken}`;
     await redisClient.del(redisKey);
     return res.status(204).json();
   }

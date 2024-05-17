@@ -1,7 +1,7 @@
 import sha1 from 'sha1';
 import Queue from 'bull';
 import dbClient from '../utils/db';
-import { authenticateAndAuthorizeUser } from '../utils/api';
+import { STATUS_CODES, authenticateAndAuthorizeUser } from '../utils/api';
 
 class UsersController {
   /**
@@ -31,12 +31,13 @@ class UsersController {
    * @param {import('express').Response} res API Response object
    */
   static async getMe(req, res) {
-    // Auth the user
     const user = await authenticateAndAuthorizeUser(req);
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: 'Unauthorized' });
     }
-    return res.status(201).json({ email: user.email, id: user.id });
+    return res
+      .status(STATUS_CODES.CREATED)
+      .json({ id: user.id, email: user.email });
   }
 }
 
