@@ -1,9 +1,7 @@
 import sha1 from 'sha1';
-import { ObjectId } from 'mongodb';
 import Queue from 'bull';
 import dbClient from '../utils/db';
-import { getXtoken } from '../utils/api';
-import redisClient from '../utils/redis';
+import { authenticateAndAuthorizeUser } from '../utils/api';
 
 class UsersController {
   /**
@@ -34,15 +32,8 @@ class UsersController {
    */
   static async getMe(req, res) {
     // Auth the user
-    const xToken = getXtoken(req);
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user id from active session
-    const userId = await redisClient.get(`auth_${xToken}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    // Get user from database
-    const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    return res.status(201).json({ email: user.email, id: userId });
+    const user = await authenticateAndAuthorizeUser(req);
+    return res.status(201).json({ email: user.email, id: user.id });
   }
 }
 

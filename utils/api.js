@@ -124,7 +124,5 @@ export async function authenticateAndAuthorizeUser(req) {
   // Get user from database
   const user = await dbClient._users.findOne({ _id: ObjectId(userId) });
   if (!user) return null;
-  const authenticatedUser = { id: user._id, name: user.name };
-  // req.user = authenticatedUser;
-  return authenticatedUser;
+  return { id: user._id, name: user.name, email: user.email };
 }
