@@ -36,7 +36,7 @@ class UsersController {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: 'Unauthorized' });
     }
     return res
-      .status(STATUS_CODES.CREATED)
+      .status(STATUS_CODES.SUCCESS)
       .json({ id: user.id, email: user.email });
   }
 }
