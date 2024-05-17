@@ -41,7 +41,7 @@ class FilesController {
     if (!fileData.isValid) {
       return res
         .status(fileData.error.code || 400)
-        .json({ error: fileData.error.message || 'Something went wrong' });
+        .json({ error: fileData.error.message || 'Unauthorized' });
     }
     const { parentId = null } = req.body;
     if (parentId && parentId !== '0' && fileData.data.type !== 'folder') {
@@ -118,10 +118,10 @@ class FilesController {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     // Get file ID
     const { id = null } = req.params;
-    if (!id) return res.status(404).json({ error: 'Not Found' });
+    if (!id) return res.status(404).json({ error: 'Not found' });
     // Search for file
     const file = await dbClient._files.findOne({ _id: ObjectId(id) });
-    if (!file) return res.status(404).json({ error: 'Not Found' });
+    if (!file) return res.status(404).json({ error: 'Not found' });
     return res.status(200).json({
       id: file._id,
       userId: file.userId,
@@ -180,7 +180,7 @@ class FilesController {
     };
     const file = await dbClient._files.findOne(filter);
     if (!file) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not found' });
     }
     await dbClient._files.updateOne(filter, {
       $set: {
@@ -216,7 +216,7 @@ class FilesController {
     };
     const file = await dbClient._files.findOne(filter);
     if (!file) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not found' });
     }
     await dbClient._files.updateOne(
       { userId: user.id, _id: ObjectId(id) },
@@ -246,7 +246,7 @@ class FilesController {
     }
     const { id } = req.params;
     if (!id) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not found' });
     }
     const filter = {
       userId: user.id,
@@ -254,7 +254,7 @@ class FilesController {
     };
     const file = await dbClient._files.findOne(filter);
     if (!file) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not found' });
     }
     if (file.type === 'folder') {
       return res
@@ -263,7 +263,7 @@ class FilesController {
     }
     const fileMIMEType = mime.lookup(file.name);
     if (!fileMIMEType) {
-      return res.status(404).json({ error: 'Not Found' });
+      return res.status(404).json({ error: 'Not found' });
     }
     // Choose thumbnail
     let imagePath = file.localPath;
@@ -275,7 +275,7 @@ class FilesController {
       const content = await fs.readFile(imagePath, { encoding: 'utf-8' });
       return res.status(STATUS_CODES.SUCCESS).type(fileMIMEType).end(content);
     } catch (err) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not Found' });
+      return res.status(STATUS_CODES.NOT_FOUND).json({ error: 'Not found' });
     }
   }
 }
