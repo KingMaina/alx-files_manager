@@ -33,6 +33,9 @@ class UsersController {
   static async getMe(req, res) {
     // Auth the user
     const user = await authenticateAndAuthorizeUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     return res.status(201).json({ email: user.email, id: user.id });
   }
 }

@@ -238,7 +238,7 @@ class FilesController {
    * @param {import("express").Response} res API Response
    */
   static async getFile(req, res) {
-    const user = authenticateAndAuthorizeUser(req);
+    const user = await authenticateAndAuthorizeUser(req);
     if (!user) {
       return res
         .status(STATUS_CODES.UNAUTHORIZED)
