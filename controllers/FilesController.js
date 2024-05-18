@@ -35,16 +35,17 @@ class FilesController {
    * @param {import("express").Response} res API Response
    */
   static async postUpload(req, res) {
+    // Auth user
     const user = await authenticateAndAuthorizeUser(req);
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!user) return res.status(STATUS_CODES.UNAUTHORIZED).json({ error: 'Unauthorized' });
     const fileData = await validateFile(req.body);
     if (!fileData.isValid) {
       return res
-        .status(fileData.error.code || 400)
+        .status(STATUS_CODES.BAD_REQUEST)
         .json({ error: fileData.error.message || 'Unauthorized' });
     }
     const { parentId = null } = req.body;
-    if (parentId && parentId !== '0' && fileData.data.type !== 'folder') {
+    if (parentId) {
       const parentFile = await findFile(parentId);
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
@@ -59,14 +60,14 @@ class FilesController {
         userId: user.id,
         name: fileData.data.name,
         type: fileData.data.type,
-        isPublic: req.body.isPublic || false,
+        isPublic: fileData.data.isPublic,
       });
       return res.status(201).json({
         id: results.insertedId,
         userId: user.id,
         name: fileData.data.name,
         type: fileData.data.type,
-        isPublic: req.body.isPublic || false,
+        isPublic: fileData.data.isPublic,
       });
     }
     // Store file locally
@@ -90,9 +91,9 @@ class FilesController {
     }
     const query = {
       userId: user.id,
-      name: req.body.name,
-      type: req.body.type,
-      isPublic: req.body.isPublic || false,
+      name: fileData.data.name,
+      type: fileData.data.type,
+      isPublic: fileData.data.isPublic,
       parentId: req.body.parentId || 0,
       localPath: filePath,
     };

@@ -1,18 +1,18 @@
 // Mongo database client
 import { MongoClient } from 'mongodb';
 
-const DB_HOST = process.env.DB_HOST ? process.env.DB_HOST : 'localhost';
-const DB_PORT = process.env.DB_PORT ? process.env.DB_PORT : 27017;
-const DB_DATABASE = process.env.DB_DATABASE
-  ? process.env.DB_DATABASE
-  : 'files_manager';
-const DB_URL = `mongodb://${DB_HOST}:${DB_PORT}`; // Remove connection of atlas
+const { DB_HOST = 'localhost' } = process.env;
+const { DB_PORT = 27017 } = process.env;
+const { DB_DATABASE = 'files_manager' } = process.env;
+const DB_URL = `mongodb://${DB_HOST}:${DB_PORT}`;
+// const { MONGO_URL } = process.env; // Remove connection of atlas
+// const DB_URL = `${MONGO_URL}`;
 
 class DBClient {
   constructor() {
     MongoClient.connect(
       DB_URL,
-      { useUnifiedTopology: true },
+      { useUnifiedTopology: true, useNewUrlParser: true },
       (error, client) => {
         if (error) {
           console.log('Database connection error', error);

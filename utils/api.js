@@ -82,21 +82,18 @@ export async function validateFile(fileData) {
     },
   };
   const {
-    name, type, data, isPublic = false,
+    name, type, data = null, isPublic = false,
   } = fileData;
   if (!name || typeof name !== 'string') {
     results.error.message = 'Missing name';
-    results.error.code = 400;
     return results;
   }
-  if (typeof type !== 'string' || !ACCEPTED_FILE_TYPES.includes(type)) {
+  if (!type || typeof type !== 'string' || !ACCEPTED_FILE_TYPES.includes(type)) {
     results.error.message = 'Missing type';
-    results.error.code = 400;
     return results;
   }
   if (!data && type !== 'folder') {
     results.error.message = 'Missing data';
-    results.error.code = 400;
     return results;
   }
   results.isValid = true;
